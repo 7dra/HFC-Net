@@ -4,17 +4,16 @@ import torch.nn.functional as F
 
 
 class FR(nn.Module):
-    """轻量化掩码特征重构模块"""
     def __init__(self, channels):
         super(FR, self).__init__()
         self.mask_generator = nn.Sequential(
-            nn.Conv2d(channels, channels // 8, kernel_size=3, padding=1),  # 减少通道数
+            nn.Conv2d(channels, channels // 8, kernel_size=3, padding=1),  
             nn.ReLU(),
             nn.Conv2d(channels // 8, channels, kernel_size=1),
             nn.Sigmoid()
         )
         self.reconstructor = nn.Sequential(
-            nn.Conv2d(channels, channels, kernel_size=3, padding=1, groups=channels),  # 深度可分离卷积
+            nn.Conv2d(channels, channels, kernel_size=3, padding=1, groups=channels),  
             nn.BatchNorm2d(channels),
             nn.ReLU()
         )
@@ -37,7 +36,7 @@ class GCA(nn.Module):
     def __init__(self, channels):
         super(GCA, self).__init__()
         self.norm = nn.LayerNorm(channels)
-        self.attention = nn.MultiheadAttention(channels, num_heads=4)  # 减少注意力头数
+        self.attention = nn.MultiheadAttention(channels, num_heads=4)  
         self.ffn = nn.Sequential(
             nn.Conv2d(channels, channels * 2, kernel_size=1),
             nn.ReLU(),
@@ -52,9 +51,9 @@ class GCA(nn.Module):
         attn_output, _ = self.attention(x_flat, x_flat, x_flat)
         attn_output = attn_output.permute(1, 2, 0).view(b, c, h, w)
 
-        out = x + attn_output  # 残差连接
+        out = x + attn_output  
 
-        out = out + self.ffn(out)  # 前馈网络
+        out = out + self.ffn(out)  
         return out
 
 
@@ -96,7 +95,6 @@ class HFC(nn.Module):
         self.upconv1 = nn.ConvTranspose2d(128, 64, kernel_size=2, stride=2)
         self.decoder1 = ConvBlock(128, 64)
 
-        # 最终输出层
         self.final = nn.Conv2d(64, num_classes, kernel_size=1)
 
     def forward(self, x):
@@ -115,8 +113,6 @@ class HFC(nn.Module):
 
         e4 = self.gca(e4)
 
-
-        # 解码器
         d3 = self.upconv3(e4)
 
         d3 = torch.cat([d3, e3], dim=1)
@@ -130,9 +126,7 @@ class HFC(nn.Module):
 
         d2 = self.decoder2(d2)
 
-
         d1 = self.upconv1(d2)
-
         d1 = torch.cat([d1, e1], dim=1)
 
         d1 = self.decoder1(d1)
